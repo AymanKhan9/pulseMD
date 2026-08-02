@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: pulsemd-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node backend/index.js
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

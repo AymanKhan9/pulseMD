@@ -162,7 +162,7 @@ export default function DataProvider({children}){
 
     const fetchDoctors = useCallback(async () => {
         try {
-            const response = await axios.post('http://localhost:3001/getVerifiedDocuments', {data:"doctor"});
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/getVerifiedDocuments', {data:"doctor"});
             setDoctors(response.data.data);
           } catch (error) {
             toast.error("Couldn't Fetch Doctors")
@@ -173,7 +173,7 @@ export default function DataProvider({children}){
     const fetchUserAppointments = async (user_id,role) => {
         console.log('called')
         try {
-            const response = await axios.post('http://localhost:3001/appointment/get', {
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/appointment/get', {
                 user_id,role
             });
             //const result = await response.data.data
@@ -187,7 +187,7 @@ export default function DataProvider({children}){
 
     const fetchYourPatients = async (user_id) => {
         try {
-            const response = await axios.post('http://localhost:3001/yourpatients', {
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/yourpatients', {
                 user_id
             });
             

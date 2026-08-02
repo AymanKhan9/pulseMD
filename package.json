@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@dotenvx/dotenvx": "^1.24.5",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.4",
@@ -20,6 +19,7 @@
     "date": "^2.0.3",
     "date-fns": "^3.3.1",
     "dayjs": "^1.11.10",
+    "dotenv": "^16.6.1",
     "express": "^4.18.2",
     "mongod": "^2.0.0",
     "mongodb": "^6.3.0",
@@ -37,7 +37,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "npx dotenvx run -- node backend/index.js"
+    "dev": "node backend/index.js"
   },
   "eslintConfig": {
     "extends": [

@@ -57,7 +57,7 @@ const BookAppointment = ({doctor_id,doctor_name,starttime,endtime,currentUser}) 
         //FUNCTON TO PUSH APPOINTMENT TO DATABASE
         console.log(appointment)
           try {
-            const response = await axios.post('http://localhost:3001/appointment/book', {
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/appointment/book', {
               appointment
             });
             console.log(appointment)

@@ -55,7 +55,7 @@ export default function AuthProvider({children}){
 
     const handleSignup = async (name,email,password,role) => {
         try {
-            const response = await axios.post('http://localhost:3001/auth/signup', {
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/auth/signup', {
               role,
               name,
               email,
@@ -83,7 +83,7 @@ export default function AuthProvider({children}){
     const handleLogin = async (email,password,role) => {
         //USER FETCHING FUNCTION 
         try {
-            const response = await axios.post('http://localhost:3001/auth/login', {
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/auth/login', {
               email, 
               password, 
               role
@@ -158,7 +158,7 @@ export default function AuthProvider({children}){
 
     const handleDeleteAccount = async () => {
         try{
-            const response = await axios.delete('http://localhost:3001/auth/delete', {
+            const response = await axios.delete('${process.env.REACT_APP_API_URL}/auth/delete', {
                data:{
                     email:  currentUser.email,  
                     role:  currentUser.role
@@ -188,7 +188,7 @@ export default function AuthProvider({children}){
         //FUNCTION UPDATE USER DETAILS IN DB
         console.log('Updated user details:', currentUser);
         try{
-            const response = await axios.post('http://localhost:3001/auth/updateProfile', {
+            const response = await axios.post('${process.env.REACT_APP_API_URL}/auth/updateProfile', {
                 currentUser
             });
             //console.log(response.data.message)
@@ -196,7 +196,7 @@ export default function AuthProvider({children}){
             setIsEditing(false);
             toast.success("Details Updated!")
             try {
-                const response = await axios.post('http://localhost:3001/fetchUser', {
+                const response = await axios.post('${process.env.REACT_APP_API_URL}/fetchUser', {
                     currentUser
                 });
           

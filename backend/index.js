@@ -2,16 +2,15 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const connectDB = require("./configs/mongodbConfig.js");
-require('@dotenvx/dotenvx').config();
+require('dotenv').config();
 
 const app = express();
 const port = 3001;
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   methods: "GET,POST,PUT,DELETE"
-}
-));
+}));
 
 app.use(bodyParser.json());
 
