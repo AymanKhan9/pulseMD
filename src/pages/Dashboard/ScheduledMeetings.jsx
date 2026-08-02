@@ -48,7 +48,7 @@ export default function ScheduledMeetings(){
         console.log(patient,date)
       //FUNCTION SENDS APPOINTMENT ID AND CONFIRMS IT
       try {
-        const response = await axios.post('${process.env.REACT_APP_API_URL}/appointment/accept', {
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/appointment/accept`, {
           patient,date
         });
         console.log("accept handled")
@@ -64,7 +64,7 @@ export default function ScheduledMeetings(){
         console.log(patient)
         //FUNCTION SENDS APPOINTMENT ID AND DELETES IT FROM DB
         try {
-            const response = await axios.delete('${process.env.REACT_APP_API_URL}/appointment/reject', {
+            const response = await axios.delete(`${process.env.REACT_APP_API_URL}/appointment/reject`, {
                 data:{
                     patient_id:  patient,
                     date: date
