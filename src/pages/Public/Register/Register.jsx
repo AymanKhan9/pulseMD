@@ -1,7 +1,21 @@
-import { Outlet,Link} from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet,Link,useSearchParams} from "react-router-dom";
+import { toast } from 'react-toastify';
 import Slideshow from "./Slideshow";
 
 const Register = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        const verified = searchParams.get('verified');
+        if (verified === 'success') {
+            toast.success("Email verified! You can now log in.");
+            setSearchParams({});
+        } else if (verified === 'failed') {
+            toast.error("Verification link is invalid or expired. Please sign up again or request a new link.");
+            setSearchParams({});
+        }
+    }, [searchParams, setSearchParams]);
 
     return (
         <div className="flex flex-col-reverse md:flex-row md:h-screen fadein">

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../store/AuthProvider";
+import GoogleAuthButton from "../../components/GoogleAuthButton";
 
 const DocLogin = () => {
     const {handleLogin} = useAuth()
@@ -38,6 +39,7 @@ const DocLogin = () => {
                         <input type="submit" value='Login' className="border-2 text-primary-white bg-blue border-blue-700 bg-blue-700 w-full text-lg rounded-md hover:bg-blue-600 hover:border-blue-600 cursor-pointer"/>
                     </div>
                 </form>
+                <GoogleAuthButton role="doctor"/>
             </div>
     )
 }

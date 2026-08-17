@@ -49,7 +49,8 @@ const FindDoc = () => {
     }
 
     if (currentUser.role === 'patient') {
-        if (currentUser.isverified) {
+        const isProfileComplete = currentUser.age && currentUser.gender && currentUser.bloodgroup && currentUser.address;
+        if (isProfileComplete) {
             return (
                 <div className="fadein relative top-16 mb-24 font-poppins min-h-screen">
                     <div className="flex flex-col items-center justify-center pt-20">
@@ -68,7 +69,7 @@ const FindDoc = () => {
 
                     <div className="flex flex-wrap mx-28 my-10 justify-center" data-aos='fade-up'>
                         {filteredDoctors.length > 0 ? filteredDoctors.map((doctor) => (
-                            <div key={doctor.id} className="flex flex-col items-center justify-center shadow-lg p-5 w-60 m-4 duration-300 hover:scale-102">
+                            <div key={doctor.email} className="flex flex-col items-center justify-center shadow-lg p-5 w-60 m-4 duration-300 hover:scale-102">
                                 <Avatar alt="Remy Sharp" src={doctor.image} sx={{ width: 150, height: 150 }} />
 
                                 <div className="font-semibold text-lg my-2 text-center">Dr. {doctor.fullname}</div>

@@ -44,38 +44,35 @@ export default function ScheduledMeetings(){
     console.log("user apts",userAppointments);
     console.log("sche apts",ScheduledAppointments)
 
-    const handleAccept = async (patient,date) => {
-        console.log(patient,date)
+    const handleAccept = async (appointmentId) => {
       //FUNCTION SENDS APPOINTMENT ID AND CONFIRMS IT
       try {
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/appointment/accept`, {
-          patient,date
+          appointmentId
         });
         console.log("accept handled")
         toast.success("Meeting Accepted")
         fetchUserAppointments(currentUser.email,currentUser.role)
       } catch (error) {
-        toast.error("Error")
+        toast.error(error.response?.data?.message || "Error")
         console.error('Error');
-      } 
+      }
     }
 
-    const handleReject = async (patient,date) => {
-        console.log(patient)
-        //FUNCTION SENDS APPOINTMENT ID AND DELETES IT FROM DB
+    const handleReject = async (appointmentId) => {
+        //FUNCTION SENDS APPOINTMENT ID, REFUNDS IF PAID, AND DELETES IT FROM DB
         try {
             const response = await axios.delete(`${process.env.REACT_APP_API_URL}/appointment/reject`, {
                 data:{
-                    patient_id:  patient,
-                    date: date
+                    appointmentId
                 }
             });
-            toast.success("Meeting Removed")
+            toast.success(response.data.message)
             fetchUserAppointments(currentUser.email,currentUser.role)
           } catch (error) {
             toast.error("Error")
             console.error('Error');
-          } 
+          }
     }
 
     /*const DocAppoint = [
@@ -129,7 +126,8 @@ export default function ScheduledMeetings(){
                             </div>
                             
                             {app.isConfirmed && <a href="https://meet.google.com/" target="blank" className="bg-blue-600 text-primary-white mt-5 sm-xl:mt-0 py-2 px-5 shadow-xl rounded-sm hover:bg-blue-700">JOIN</a>}
-                            {!app.isConfirmed && <p className="italic text-error mt-2 sm-xl:mt-0">Status Pending</p>}
+                            {!app.isConfirmed && app.paymentStatus !== 'paid' && <p className="italic text-error mt-2 sm-xl:mt-0">Payment Pending</p>}
+                            {!app.isConfirmed && app.paymentStatus === 'paid' && <p className="italic text-error mt-2 sm-xl:mt-0">Status Pending</p>}
                         </div>
                     )
                 })}
@@ -160,8 +158,8 @@ export default function ScheduledMeetings(){
                             {app.isConfirmed && <a href="https://meet.google.com/" target="blank" className=" bg-blue-600 text-primary-white mt-5 sm-xl:mt-0 py-2 px-4 shadow-xl rounded-sm hover:bg-blue-700">JOIN</a>}
                             {!app.isConfirmed && 
                                 <div className="lg:flex lg:flex-col lg-xl:block mt-5 sm-xl:mt-0">
-                                    <button className="bg-red-600 text-primary-white lg:ml-2 lg:mb-2 lg-xl:mb-0 py-2 px-4 shadow-xl rounded-sm mr-2 cursor-pointer hover:bg-red-700" onClick={() => handleReject(app.patient_id,app.date)}>Reject</button>
-                                    <button className="bg-green-600 text-primary-white py-2 px-4 shadow-xl rounded-sm cursor-pointer hover:bg-green-500" onClick={() => handleAccept(app.patient_id,app.date)}>Accept</button>
+                                    <button className="bg-red-600 text-primary-white lg:ml-2 lg:mb-2 lg-xl:mb-0 py-2 px-4 shadow-xl rounded-sm mr-2 cursor-pointer hover:bg-red-700" onClick={() => handleReject(app._id)}>Reject</button>
+                                    <button className="bg-green-600 text-primary-white py-2 px-4 shadow-xl rounded-sm cursor-pointer hover:bg-green-500" onClick={() => handleAccept(app._id)}>Accept</button>
                                 </div>}
                         </div>
                     )

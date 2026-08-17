@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/AuthProvider";
 import { useState } from "react";
+import GoogleAuthButton from "../../components/GoogleAuthButton";
 
 const DocSignup = () => {
     const {handleSignup} = useAuth()
@@ -69,6 +70,7 @@ const DocSignup = () => {
                         <input type="submit" value='Sign up' className="border-2 text-primary-white bg-blue border-blue-700 bg-blue-700 w-full text-lg rounded-md hover:bg-blue-600 hover:border-blue-600 cursor-pointer"/>
                     </div>
                 </form>
+                <GoogleAuthButton role="doctor"/>
             </div>
     )
 }

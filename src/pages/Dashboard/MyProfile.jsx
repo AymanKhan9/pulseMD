@@ -2,11 +2,13 @@ import { useAuth } from "../../store/AuthProvider";
 import { useState } from "react";
 import { Alert } from "@mui/material";
 import DeleteAccountDialog from "./DeleteAccountDialog";
+import ChangePasswordDialog from "./ChangePasswordDialog";
 
 export default function MyProfile(){
     const {currentUser,updateUserDetails,handleSaveChanges, isEditing, setIsEditing} = useAuth()
     const [selectedFile, setSelectedFile] = useState(null);
     const [open, setOpen] = useState(false);
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
     const handleDialogOpen = () => {
       setOpen(true);
@@ -36,9 +38,10 @@ export default function MyProfile(){
     };
   
     if(currentUser.role === 'patient'){
+      const isProfileIncomplete = !currentUser.age || !currentUser.gender || !currentUser.bloodgroup || !currentUser.address;
       return (
           <div className="mt-8 flex flex-col min-h-96 justify-center" data-aos='fade-up'>
-            {!currentUser.isverified && <Alert className="mb-6" severity="warning">Kindly Complete Your Profile.</Alert>}
+            {isProfileIncomplete && <Alert className="mb-6" severity="warning">Kindly Complete Your Profile.</Alert>}
               
               <div className="flex flex-col mb-4">
                 <label className="font-bold text-md">Name*</label>
@@ -68,22 +71,15 @@ export default function MyProfile(){
                   />
               </div>
 
-              <div className="flex flex-col mb-4">  
-                <label className="font-bold text-md ">Password*</label>   
-                <input
-                  className="py-2 border-b-2 outline-none focus:border-blue-700"
-                  placeholder="Password"
-                  required
-                  type="password"
-                  name="password"
-                  value={currentUser.password}
-                  readOnly
-                />                 
-              </div>
+              {currentUser.hasPassword && (
+                <div className="flex flex-col mb-4">
+                  <button type="button" className="text-primary-blue font-semibold text-left underline" onClick={() => setPasswordDialogOpen(true)}>Change Password</button>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-5">
                 <div className="w-full flex flex-col items-baseline mb-5">
-                  <label className="font-bold text-md mr-4">Age</label>                 
+                  <label className="font-bold text-md mr-4">Age</label>
                   <input
                   className="w-full py-2 border-b-2 outline-none focus:border-blue-700"
                       type="number"
@@ -107,15 +103,16 @@ export default function MyProfile(){
                     onChange={handleInputChange}
                     readOnly={!isEditing || isEditing !== 'gender'}
                   >
+                    <option value="" disabled>Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
-                  </select>                   
+                  </select>
                 </div>
               </div>
-            
+
               <div className="flex flex-col justify-between items-baseline mb-4">
-                  <label className="font-bold text-md"> Blood Group </label>                 
+                  <label className="font-bold text-md"> Blood Group </label>               
                   <input
                     name="bloodgroup"
                     className="w-full py-2 border-b-2 outline-none focus:border-blue-700"
@@ -152,8 +149,9 @@ export default function MyProfile(){
 
           <button className="mb-4 w-full text-primary-white p-2 bg-blue-600 hover:bg-blue-700" onClick={handleSaveChanges}>Save Changes</button>
           <button className="w-full text-primary-white p-2 bg-red-600 hover:bg-red-700" onClick={handleDialogOpen}>Delete Account</button>
-          
+
           <DeleteAccountDialog isOpen={open} handleClose={handleDialogClose}/>
+          <ChangePasswordDialog isOpen={passwordDialogOpen} handleClose={() => setPasswordDialogOpen(false)}/>
       </div>
       )
   }
@@ -192,22 +190,15 @@ export default function MyProfile(){
             />
         </div>
 
-        <div className="flex flex-col mb-4">  
-          <label className="font-bold text-md ">Password*</label>   
-          <input
-            className="py-2 border-b-2 outline-none focus:border-blue-700"
-            placeholder="Password"
-            required
-            type="password"
-            name="password"
-            value={currentUser.password}
-            readOnly
-          />                 
-        </div>
+        {currentUser.hasPassword && (
+          <div className="flex flex-col mb-4">
+            <button type="button" className="text-primary-blue font-semibold text-left underline" onClick={() => setPasswordDialogOpen(true)}>Change Password</button>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-5">
           <div className="w-full flex flex-col items-baseline mb-5">
-            <label className="font-bold text-md mr-4">Age</label>                 
+            <label className="font-bold text-md mr-4">Age</label>
             <input
             className="w-full py-2 border-b-2 outline-none focus:border-blue-700"
                 type="number"
@@ -233,10 +224,11 @@ export default function MyProfile(){
               onChange={handleInputChange}
               readOnly={!isEditing || isEditing !== 'gender'}
             >
+              <option value="" disabled>Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Other">Other</option>
-            </select>                   
+            </select>
           </div>
 
           <div className="w-full flex flex-col items-baseline mb-5">
@@ -315,6 +307,7 @@ export default function MyProfile(){
               onChange={handleInputChange}
               readOnly={!isEditing || isEditing !== 'speciality'}
             >
+              <option value="" disabled>Select Speciality</option>
               <option value="Dermatology">Dermatology</option>
               <option value="Pediatrician">Pediatrician</option>
               <option value="Radiology">Radiology</option>
@@ -384,6 +377,7 @@ export default function MyProfile(){
         <button className="w-full text-primary-white p-2 bg-red-600 hover:bg-red-700" onClick={handleDialogOpen}>Delete Account</button>
 
         <DeleteAccountDialog isOpen={open} handleClose={handleDialogClose}/>
+        <ChangePasswordDialog isOpen={passwordDialogOpen} handleClose={() => setPasswordDialogOpen(false)}/>
       </div>
     )
   }

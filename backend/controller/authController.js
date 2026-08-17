@@ -1,21 +1,25 @@
 const express = require("express");
 const bcryptUtils = require("../utils/bcrypt-hashing.js");
-const connectDB = require("../configs/mongodbConfig.js");
+const PatientModel = require("../models/patientModel.js");
+const DoctorModel = require("../models/doctorModel.js");
+const jwt = require("jsonwebtoken");
+const authMiddleware = require("../middleware/authMiddleware.js");
+const { sendVerificationEmail } = require("../utils/mailer.js");
+const { OAuth2Client } = require("google-auth-library");
 
 const router = express.Router();
+
+const getModel = (role) => (role === "patient" ? PatientModel : DoctorModel);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 router.post("/login", async (req, res) => {
   const { email, password, role } = req.body;
 
   try {
-    // Log the incoming data
-    console.log(email, password, role);
-
-    const db = await connectDB();
-    const collection = db.collection(role);
+    const Model = getModel(role);
 
     // Find the user by email
-    const result = await collection.findOne({ email });
+    const result = await Model.findOne({ email }).lean();
 
     if (!result) {
       return res
@@ -23,16 +27,31 @@ router.post("/login", async (req, res) => {
         .json({ success: false, message: "Email doesn't exist" });
     }
 
+    if (!result.password) {
+      return res.status(400).json({
+        success: false,
+        message: "This account uses Google Sign-In. Please log in with Google instead.",
+      });
+    }
+
     // Compare the hashed password
     const isMatch = await bcryptUtils.compareHash(password, result.password);
 
     if (isMatch) {
+      if (!result.emailVerified) {
+        return res.status(403).json({
+          success: false,
+          message: "Please verify your email before logging in. Check your inbox for the verification link.",
+        });
+      }
+
       const { _id, password, ...userData } = result;
-      console.log(result);
+      const token = jwt.sign({ email, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
       res.status(200).json({
         success: true,
         message: "Login successful",
-        user: userData,
+        user: { ...userData, hasPassword: !!password },
+        token,
       });
     } else {
       // If passwords don't match
@@ -49,13 +68,9 @@ router.post("/signup", async (req, res) => {
   const { name, email, password, role } = req.body;
 
   try {
-    console.log(name, email, password, role);
-
-    const db = await connectDB();
-    const dbRole = role === "patient" ? "patient" : "doctor"; //selects the collections based on role recieved.
-
-    const collection = db.collection(dbRole);
-    const userExists = await collection.findOne({ email });
+    const dbRole = role === "patient" ? "patient" : "doctor"; //selects the collection based on role recieved.
+    const Model = getModel(dbRole);
+    const userExists = await Model.findOne({ email });
 
     if (userExists) {
       res
@@ -64,47 +79,46 @@ router.post("/signup", async (req, res) => {
     } else {
       const hashedPassword = await bcryptUtils.hashString(password);
 
-      console.log("hashed: ", hashedPassword);
-      let query;
-      if (dbRole === "patient") {
-        query = {
-          email: email,
-          password: hashedPassword,
-          role: role,
-          fullname: name,
-          age: "",
-          image: "",
-          gender: "",
-          bloodgroup: "",
-          address: "",
-          isverified: false,
-        };
-      } else {
-        query = {
-          email: email,
-          password: hashedPassword,
-          role: role,
-          fullname: name,
-          image: "",
-          gender: "",
-          address: "",
-          age: "",
-          degree: "",
-          speciality: "",
-          regno: "",
-          regyear: "",
-          experience: "",
-          starttime: "",
-          endtime: "",
-          isverified: false,
-        };
-      }
+      const baseFields = {
+        email,
+        password: hashedPassword,
+        role,
+        fullname: name,
+        image: "",
+        gender: "",
+        address: "",
+        age: "",
+        isverified: false,
+        emailVerified: false,
+      };
 
-      const result = await collection.insertOne(query);
+      const query =
+        dbRole === "patient"
+          ? { ...baseFields, bloodgroup: "" }
+          : {
+              ...baseFields,
+              degree: "",
+              speciality: "",
+              starttime: "",
+              endtime: "",
+              // regno/regyear/experience are Number in the schema — left unset here
+              // rather than "" (which would fail Number casting), filled in later via updateProfile.
+            };
+
+      const result = await Model.create(query);
 
       if (result) {
-        console.log(result);
-        res.status(200).json({ success: true, message: "Sign Up successful" });
+        const verificationToken = jwt.sign(
+          { email, role: dbRole },
+          process.env.EMAIL_TOKEN_SECRET,
+          { expiresIn: "1d" }
+        );
+        await sendVerificationEmail(email, verificationToken);
+
+        res.status(200).json({
+          success: true,
+          message: "Sign up successful! Please check your email to verify your account before logging in.",
+        });
       } else {
         res.status(401).json({ success: false, message: "Unable to Sign Up" });
       }
@@ -115,15 +129,148 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.delete("/delete", async (req, res) => {
+router.post("/google", async (req, res) => {
+  const { idToken, role } = req.body;
+
+  try {
+    const dbRole = role === "patient" ? "patient" : "doctor";
+    const Model = getModel(dbRole);
+
+    // Verifies the token was actually issued by Google for this app's client ID —
+    // never trust a decoded-but-unverified token here.
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+
+    let user = await Model.findOne({ email }).lean();
+
+    if (!user) {
+      const baseFields = {
+        email,
+        role: dbRole,
+        fullname: payload.name || "",
+        image: payload.picture || "",
+        gender: "",
+        address: "",
+        age: "",
+        isverified: false,
+        emailVerified: true, // Google already verified this address
+      };
+
+      const query =
+        dbRole === "patient"
+          ? { ...baseFields, bloodgroup: "" }
+          : { ...baseFields, degree: "", speciality: "", starttime: "", endtime: "" };
+
+      user = await Model.create(query);
+      user = user.toObject();
+    }
+
+    const { _id, password, ...userData } = user;
+    const token = jwt.sign({ email, role: dbRole }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(200).json({
+      success: true,
+      message: "Google sign-in successful",
+      user: { ...userData, hasPassword: !!password },
+      token,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(401).json({ success: false, message: "Google sign-in failed" });
+  }
+});
+
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const decoded = jwt.verify(token, process.env.EMAIL_TOKEN_SECRET);
+    const Model = getModel(decoded.role);
+
+    await Model.updateOne({ email: decoded.email }, { $set: { emailVerified: true } });
+
+    res.redirect(`${process.env.FRONTEND_URL}/Register?verified=success`);
+  } catch (error) {
+    console.error("Error:", error);
+    res.redirect(`${process.env.FRONTEND_URL}/Register?verified=failed`);
+  }
+});
+
+router.post("/resend-verification", async (req, res) => {
   const { email, role } = req.body;
 
   try {
-    console.log("Profile to Delete: ", email, role);
-    const db = await connectDB();
-    const collection = db.collection(role);
+    const dbRole = role === "patient" ? "patient" : "doctor";
+    const Model = getModel(dbRole);
+    const user = await Model.findOne({ email });
 
-    const result = await collection.deleteOne({ email: email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Email doesn't exist" });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ success: false, message: "Email is already verified" });
+    }
+
+    const verificationToken = jwt.sign(
+      { email, role: dbRole },
+      process.env.EMAIL_TOKEN_SECRET,
+      { expiresIn: "1d" }
+    );
+    await sendVerificationEmail(email, verificationToken);
+
+    res.status(200).json({ success: true, message: "Verification email resent" });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.post("/change-password", authMiddleware, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const { email, role } = req.user; // from the verified JWT, not the request body
+
+  try {
+    const Model = getModel(role);
+    const user = await Model.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "This account uses Google Sign-In and has no password to change.",
+      });
+    }
+
+    const isMatch = await bcryptUtils.compareHash(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcryptUtils.hashString(newPassword);
+    await Model.updateOne({ email }, { $set: { password: hashedPassword } });
+
+    res.status(200).json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+router.delete("/delete", authMiddleware, async (req, res) => {
+  const { email, role } = req.body;
+
+  try {
+    const Model = getModel(role);
+
+    const result = await Model.deleteOne({ email: email });
 
     if (result.deletedCount === 1) {
       res
@@ -140,19 +287,15 @@ router.delete("/delete", async (req, res) => {
   }
 });
 
-router.post("/updateProfile", async (req, res) => {
+router.post("/updateProfile", authMiddleware, async (req, res) => {
   const { currentUser } = req.body;
-  console.log(currentUser.role);
 
   try {
-    const db = await connectDB();
-    const collection = db.collection(currentUser.role);
+    const Model = getModel(currentUser.role);
 
     const { _id, email, password, role, ...updateField } = currentUser;
-    // console.log("Update Field:",updateField);
 
-    const result = await collection.updateOne({email: email},{$set: updateField});
-    // console.log("Result:",result);
+    const result = await Model.updateOne({ email: email }, { $set: updateField });
     if (result.modifiedCount > 0) {
       res
         .status(200)

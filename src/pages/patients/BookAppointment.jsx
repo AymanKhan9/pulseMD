@@ -57,20 +57,20 @@ const BookAppointment = ({doctor_id,doctor_name,starttime,endtime,currentUser}) 
         //FUNCTON TO PUSH APPOINTMENT TO DATABASE
         console.log(appointment)
           try {
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}/appointment/book`, {
+            const bookResponse = await axios.post(`${process.env.REACT_APP_API_URL}/appointment/book`, {
               appointment
             });
-            console.log(appointment)
-  
-            toast.success(response.data.message)
-            setErrorMessage('')
-            setAppointment(prevState => ({ ...prevState, symptoms: '',date:null }));
-            setOpen(false)
+
+            const checkoutResponse = await axios.post(`${process.env.REACT_APP_API_URL}/payment/create-checkout-session`, {
+              appointmentId: bookResponse.data.appointmentId
+            });
+
+            window.location.href = checkoutResponse.data.checkoutUrl
           } catch (error) {
             const errVar = "error";
             toast.error(errVar);
             //console.error('Error booking appointment:');
-          } 
+          }
       } else if(!isTimeWithinSchedule(appointment.date)){
         setErrorMessage("Please choose the time within the doctor's slot");
       } else if(!appointment.symptoms){

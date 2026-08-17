@@ -1,5 +1,7 @@
 import { useAuth } from "../../store/AuthProvider"
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import MyProfile from "./MyProfile";
 import { Prescriptions } from "./Prescriptions";
 import ScheduledMeetings from "./ScheduledMeetings";
@@ -8,6 +10,19 @@ import { Avatar } from "@mui/material";
 export const Dashboard = () => {
     const [tab, setTab] = useState("profile")
     const {currentUser} = useAuth()
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        const payment = searchParams.get('payment');
+        if (payment === 'success') {
+            toast.success("Payment successful! Your appointment is awaiting the doctor's confirmation.");
+            setTab('meetings');
+            setSearchParams({});
+        } else if (payment === 'cancelled') {
+            toast.error("Payment was cancelled. Your appointment was not confirmed.");
+            setSearchParams({});
+        }
+    }, [searchParams, setSearchParams]);
 
     return(
         <div className="fadein w-full relative top-24 flex flex-col lg:flex-row font-poppins items-center mb-48 min-h-screen px-5">

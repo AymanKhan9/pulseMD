@@ -64,7 +64,7 @@ export default function AuthProvider({children}){
       
             console.log(response.data); // Successful registration message
             navigate('/Register')
-            toast.success("Signed Up!")
+            toast.success("Signed up! Check your email to verify your account before logging in.")
           } catch (error) {
             console.log(role);
             console.error('Signup error:', error.response.data.message);
@@ -77,25 +77,47 @@ export default function AuthProvider({children}){
             setCurrentuser(JSON.parse(sessionStorage.getItem('currentUser')))
             console.log(currentUser)
             console.log(userRole);
-        } 
+        }
+        const storedToken = sessionStorage.getItem('authToken');
+        if (storedToken) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        }
     },[]);
 
-    const handleLogin = async (email,password,role) => {
-        //USER FETCHING FUNCTION 
+    const establishSession = (user, token) => {
+        setUserRole(user.role)
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        sessionStorage.setItem('authToken', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setCurrentuser(user)
+        toast.success("Logged In!")
+        navigate('/dashboard')
+    }
+
+    const handleGoogleAuth = async (idToken,role) => {
         try {
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, {
-              email, 
-              password, 
+            const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/google`, {
+              idToken,
               role
             });
-      
+
+            establishSession(response.data.user, response.data.token)
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Google sign-in failed")
+        }
+    }
+
+    const handleLogin = async (email,password,role) => {
+        //USER FETCHING FUNCTION
+        try {
+            const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, {
+              email,
+              password,
+              role
+            });
+
             console.log(response.data); // Successful login message
-            const user = await response.data.user;
-            setUserRole('patient')
-            sessionStorage.setItem('currentUser', JSON.stringify(user));
-            setCurrentuser(user)
-            toast.success("Logged In!")
-            navigate('/dashboard')
+            establishSession(response.data.user, response.data.token)
         } catch (error) {
             console.log(role);
             //console.error('Login error:', error.response.data);
@@ -151,6 +173,8 @@ export default function AuthProvider({children}){
     function handleLogout(){
         //setUserRole('')
         sessionStorage.removeItem('currentUser');
+        sessionStorage.removeItem('authToken');
+        delete axios.defaults.headers.common['Authorization'];
         setCurrentuser('');
         console.log(currentUser)
         navigate('/Register')
@@ -171,6 +195,20 @@ export default function AuthProvider({children}){
         } catch(error){
             console.log(error);
             toast.error("Error in deleting account")
+        }
+    }
+
+    const handleChangePassword = async (currentPassword, newPassword) => {
+        try {
+            const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/change-password`, {
+                currentPassword,
+                newPassword
+            });
+            toast.success(response.data.message)
+            return true
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Error changing password")
+            return false
         }
     }
 
@@ -219,8 +257,10 @@ export default function AuthProvider({children}){
         isEditing: isEditing,
         setIsEditing: setIsEditing,
         handleLogin: handleLogin,
+        handleGoogleAuth: handleGoogleAuth,
         handleSignup: handleSignup,
         handleSaveChanges: handleSaveChanges,
+        handleChangePassword: handleChangePassword,
         updateUserDetails: updateUserDetails,
         handleLogout: handleLogout,
         handleDeleteAccount: handleDeleteAccount

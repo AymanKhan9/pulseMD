@@ -1,20 +1,15 @@
-const { MongoClient } = require("mongodb");
 const express = require("express");
+const authMiddleware = require("../middleware/authMiddleware.js");
 const router = express.Router();
 
-const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri);
+router.use(authMiddleware);
 
 router.post("/", async (req, res) => {
   const doctorIdToQuery = req.body.user_id; //`ObjectId(${req.body})`;
   console.log(doctorIdToQuery);
   try {
-    // Connect to MongoDB
-    await client.connect();
-
-    // Database and collection
-    const database = client.db("users");
-    const collection = database.collection("appointments");
+    const db = req.app.locals.db;
+    const collection = db.collection("appointments");
 
     const prescriptionsWithDoctor = await collection
       .aggregate([
@@ -55,9 +50,6 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error("Error querying prescriptions:", error);
     res.status(500).json({ error: "Internal server error" });
-  } finally {
-    // Close the MongoDB connection
-    await client.close();
   }
 });
 

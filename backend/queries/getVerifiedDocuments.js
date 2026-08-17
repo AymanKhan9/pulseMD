@@ -1,21 +1,17 @@
 const express = require("express");
-const { MongoClient } = require("mongodb");
+const authMiddleware = require("../middleware/authMiddleware.js");
 
 const router = express.Router();
-const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri);
 
+router.use(authMiddleware);
 
 router.post("/", async (req, res) => {
   const collectionName = req.body.data;
   console.log(collectionName);
 
   try {
-    console.log(collectionName);
-    await client.connect();
-
-    const database = client.db("users");
-    const collection = database.collection(collectionName);
+    const db = req.app.locals.db;
+    const collection = db.collection(collectionName);
 
     const resultArray = await collection.find({ isverified: true }).toArray();
 
@@ -38,8 +34,6 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
-  } finally {
-    await client.close();
   }
 });
 
